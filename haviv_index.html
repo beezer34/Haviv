@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ask Haviv Anything — Patreon Community Episode Index</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 850: '#151f32', 950: '#0a0f1a' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .tag-pill { transition: all 0.15s ease-in-out; }
+    .tag-pill:hover { transform: translateY(-1px); }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- ========================================================================= -->
+  <!-- PATREON COMMUNITY GATE OVERLAY                                            -->
+  <!-- Default Passcode: aha-patron                                              -->
+  <!-- Magic Auto-Unlock URL: https://beezer34.github.io/Haviv/?unlock=aha-patron -->
+  <!-- ========================================================================= -->
+  <div id="patreonGate" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl text-center">
+      <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-4 text-amber-400">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+
+      <span class="px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold uppercase tracking-wider rounded">Patreon Community Exclusive</span>
+      <h2 class="text-xl font-bold text-white mt-3">Ask Haviv Anything Index</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
+        This searchable episode directory is built for the <strong class="text-slate-200">Ask Haviv Anything</strong> Patreon community to find and share episodes with family and friends.
+      </p>
+
+      <form onsubmit="verifyCommunityAccess(event)" class="mt-6 space-y-3">
+        <input type="password" id="gatePasscode" required placeholder="Enter Community Passcode..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-sm text-center text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+        <p id="gateError" class="hidden text-xs text-rose-400">Invalid passcode. Please check the Patreon community post or join below.</p>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow">
+          Unlock Episode Index
+        </button>
+      </form>
+
+      <div class="mt-6 pt-5 border-t border-slate-800/80 text-xs text-slate-400 flex flex-col gap-2">
+        <span>Part of the community? Check the Patreon post for the 1-click unlock link or passcode.</span>
+        <a href="https://www.patreon.com/cw/AskHavivAnything" target="_blank" rel="noopener" class="mt-1 inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 transition">
+          <span>Open Ask Haviv Anything on Patreon</span> &nearr;
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <span class="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider rounded">Patreon Index</span>
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Ask Haviv Anything</h1>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">Search by topic, guest, or era &mdash; and copy formatted episode recommendations to share</p>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="syncFromRSS()" id="rssBtn" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs sm:text-sm font-medium transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>Sync RSS Feed</span>
+          </button>
+          <button onclick="toggleModal('addModal')" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs sm:text-sm font-semibold transition shadow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Add / Export</span>
+          </button>
+          <button onclick="exportCSV()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs sm:text-sm font-medium transition" title="Download full table as CSV">
+            <span>CSV</span>
+          </button>
+          <button onclick="lockSite()" class="inline-flex items-center gap-1 px-2.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-xs transition" title="Lock site (test Patreon gate)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search and Filter Bar -->
+      <div class="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-6 relative">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" id="searchInput" oninput="render()" placeholder="Search by episode #, title, guest (e.g. 'McGurk', 'Goodman'), or keyword..." class="w-full pl-10 pr-8 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <button onclick="clearSearch()" id="clearSearchBtn" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-white text-xs px-1.5 py-0.5 bg-slate-800 rounded">ESC</button>
+        </div>
+
+        <div class="md:col-span-3">
+          <select id="categorySelect" onchange="render()" class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+            <option value="ALL">All Macro Themes</option>
+            <option value="Gaza & War Strategy">Gaza & War Strategy</option>
+            <option value="Iran & Regional Axis">Iran & Regional Axis</option>
+            <option value="Israeli Politics & Society">Israeli Politics & Society</option>
+            <option value="US & Global Diplomacy">US & Global Diplomacy</option>
+            <option value="Antisemitism & Diaspora">Antisemitism & Diaspora</option>
+            <option value="Jewish History & Philosophy">Jewish History & Philosophy</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-3 flex gap-2">
+          <select id="sortSelect" onchange="render()" class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+            <option value="desc">Newest First (#153 → #0)</option>
+            <option value="asc">Oldest First (#0 → #153)</option>
+          </select>
+          <button onclick="resetAllFilters()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 shrink-0">Reset</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Status Toast Banner -->
+    <div id="statusToast" class="hidden fixed bottom-5 right-5 z-50 max-w-md p-3.5 rounded-xl bg-emerald-950 border border-emerald-500/50 text-emerald-200 text-xs sm:text-sm shadow-2xl flex items-center justify-between gap-3">
+      <span id="statusToastMsg" class="font-medium"></span>
+      <button onclick="document.getElementById('statusToast').classList.add('hidden')" class="text-xs underline text-emerald-400 shrink-0">Dismiss</button>
+    </div>
+
+    <!-- Popular Topic Cloud -->
+    <div class="mb-6 bg-slate-900/60 border border-slate-800/80 rounded-xl p-4">
+      <div class="flex items-center justify-between mb-2.5">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Filter by Top Indexing Keywords</span>
+        <span id="activeTagIndicator" class="text-xs text-amber-400 hidden">Active Tag Filter: <strong id="activeTagName"></strong> <button onclick="setTagFilter(null)" class="ml-1 underline text-slate-300">Clear</button></span>
+      </div>
+      <div id="topicCloud" class="flex flex-wrap gap-1.5"></div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 text-xs sm:text-sm text-slate-400">
+      <div>Showing <strong id="visibleCount" class="text-white">0</strong> of <strong id="totalCount" class="text-white">0</strong> indexed episodes</div>
+      <div class="flex items-center gap-4">
+        <a href="https://www.patreon.com/cw/AskHavivAnything" target="_blank" rel="noopener" class="hover:text-amber-400 underline">Patreon Community</a>
+        <a href="https://havivgur.substack.com/podcast" target="_blank" rel="noopener" class="hover:text-amber-400 underline">Substack</a>
+        <a href="https://podcasts.apple.com/us/podcast/ask-haviv-anything/id1794590850" target="_blank" rel="noopener" class="hover:text-amber-400 underline">Apple Podcasts</a>
+      </div>
+    </div>
+
+    <!-- Episodes Grid -->
+    <div id="episodesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </main>
+
+  <!-- Add / Update Episode Modal -->
+  <div id="addModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h2 class="text-lg font-bold text-white">Add New Episode / Generate Update Code</h2>
+        <button onclick="toggleModal('addModal')" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-400 mt-3">
+        Adding an episode here saves it immediately in your browser's local storage AND generates the single-line JSON entry so you can paste it into <code class="text-amber-300">RAW_EPISODES</code> inside <code class="text-amber-300">index.html</code> for permanent hosting.
+      </p>
+
+      <form onsubmit="addCustomEpisode(event)" class="mt-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Episode # *</label>
+            <input type="number" id="newEpNum" required placeholder="154" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white">
+          </div>
+          <div class="sm:col-span-3">
+            <label class="block text-xs text-slate-400 mb-1">Episode Title *</label>
+            <input type="text" id="newEpTitle" required placeholder="e.g. Inside Israel's Election Night, with Amit Segal" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">1-2 Sentence Summary *</label>
+          <textarea id="newEpSummary" rows="2" required placeholder="Concise summary of the episode's core arguments and guest insights..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">3-5 Keywords (comma-separated) *</label>
+            <input type="text" id="newEpTags" required placeholder="2026 Elections, Coalition Math, Amit Segal" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Direct Episode Link (Optional)</label>
+            <input type="url" id="newEpUrl" placeholder="https://havivgur.substack.com/..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="clearCustomStorage()" class="px-3 py-2 rounded-lg bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-700/40 text-xs mr-auto">Reset Local Additions</button>
+          <button type="button" onclick="toggleModal('addModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold">Save Episode & Generate Snippet</button>
+        </div>
+      </form>
+
+      <!-- Snippet Output -->
+      <div id="snippetBox" class="hidden mt-4 pt-4 border-t border-slate-800">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold text-emerald-400">Saved to Browser! Copy this line into RAW_EPISODES in index.html:</span>
+          <button onclick="copySnippet()" class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-amber-300">Copy Line</button>
+        </div>
+        <pre id="snippetCode" class="p-3 bg-slate-950 border border-slate-800 rounded text-xs text-slate-300 overflow-x-auto"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // PATREON GATE AUTHENTICATION (Passcode: "aha-patron" or ?unlock=aha-patron)
+    // ============================================================================
+    const ACCESS_HASH = "82246a9c4a6b7339150275e347e8836731f21d58b4e3866c96303d61e52a1675";
+    const AUTH_STORAGE_KEY = "aha_patreon_unlocked_v1";
+
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str.trim().toLowerCase()));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function initGate() {
+      const gate = document.getElementById("patreonGate");
+      if (localStorage.getItem(AUTH_STORAGE_KEY) === ACCESS_HASH) {
+        gate.classList.add("hidden");
+        return;
+      }
+      const params = new URLSearchParams(window.location.search);
+      const magicKey = params.get("unlock");
+      if (magicKey && (await sha256(magicKey)) === ACCESS_HASH) {
+        localStorage.setItem(AUTH_STORAGE_KEY, ACCESS_HASH);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        gate.classList.add("hidden");
+      }
+    }
+
+    async function verifyCommunityAccess(e) {
+      e.preventDefault();
+      const input = document.getElementById("gatePasscode").value;
+      const hash = await sha256(input);
+      if (hash === ACCESS_HASH) {
+        localStorage.setItem(AUTH_STORAGE_KEY, ACCESS_HASH);
+        document.getElementById("patreonGate").classList.add("hidden");
+        document.getElementById("gateError").classList.add("hidden");
+      } else {
+        document.getElementById("gateError").classList.remove("hidden");
+      }
+    }
+
+    function lockSite() {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      document.getElementById("gatePasscode").value = "";
+      document.getElementById("patreonGate").classList.remove("hidden");
+    }
+
+    initGate();
+
+    // ============================================================================
+    // MASTER EPISODE DATABASE (Episodes 0 to 153)
+    // Format: [epNumber, "Title", "1-2 sentence summary", ["Tag1", "Tag2", ...], "optionalDirectURL"]
+    // ============================================================================
+    const RAW_EPISODES = [
+      [153, "Where was Netanyahu on 7/10? With Elliot Kaufman", "Wall Street Journal editor Elliot Kaufman joins Haviv to examine the internal rivalries, decision-making, and conduct of Israel's wartime cabinet on and after October 7.", ["Elliot Kaufman", "Benjamin Netanyahu", "October 7 Decision-Making", "War Cabinet"]],
+      [152, "Is Israeli society tearing itself apart? With Micah Goodman", "Examines the paradox of pre-election Israel: deep public consensus on core issues alongside polarizing political rhetoric designed to divide tribes.", ["Micah Goodman", "Social Cohesion", "Political Polarization", "Israeli Consensus"], "https://www.patreon.com/AskHavivAnything/posts/152-is-israeli-171885372"],
+      [151, "Could the hostages have come home sooner? With Brett McGurk", "Former White House Middle East coordinator Brett McGurk details the secret diplomacy, Rafah showdowns, and Sinwar's obstinacy in his book Brink.", ["Brett McGurk", "Hostage Negotiations", "Yahya Sinwar", "Biden Diplomacy"], "https://www.patreon.com/AskHavivAnything/posts/151-could-have-171585070"],
+      [150, "The case for Netanyahu, with Gadi Taub", "Conservative commentator Gadi Taub debates Haviv ahead of the elections, defending Netanyahu's wartime management against charges of pre-war complacency and division.", ["Gadi Taub", "Benjamin Netanyahu", "Israeli Right", "2026 Elections", "Wartime Leadership"]],
+      [149, "Patriotism is too important to leave to extremists, with Prof. Alex Yakobson", "Debates liberal nationalism, brain drain fears in Israel, and why democracies collapse into chauvinism when liberals abandon patriotism to the far right.", ["Alexander Yakobson", "Liberal Patriotism", "Israeli Emigration", "Democratic Cohesion"]],
+      [148, "What can you do for Palestinians? Stop supporting Hamas", "Responds to journalist Ayman Mohyeldin, arguing that Western apologetics for Hamas condemn Palestinians to endless devastation rather than liberation.", ["Ayman Mohyeldin", "Hamas Apologetics", "Pro-Palestinian Advocacy", "Media Response"]],
+      [147, "Are the allegations in NAZA true?", "A focused short-form episode fact-checking viral controversies, propaganda narratives, and specific empirical claims circulating about the war.", ["Fact-Checking", "Media Literacy", "Viral Narratives", "War Allegations"]],
+      [146, "Israel's political system worked. Then we tried to fix it. With Dr. Shany Mor", "Political theorist Shany Mor explains how Israel's chaotic 1949 proportional representation system kept the peace, and how raising electoral thresholds empowered extremists.", ["Shany Mor", "Israeli Electoral System", "Knesset Threshold", "Proportional Representation"]],
+      [145, "Waking up from our rage-filled slumber", "Uses Rosh Hashanah philosophy and classical Jewish texts to critique the social media attention economy that profits by keeping citizens addicted to political rage.", ["Rosh Hashanah", "Attention Economy", "Social Media Rage", "Jewish Philosophy"], "https://www.youtube.com/watch?v=61InpiAN3jY"],
+      [144, "Inside the fight to change Haredi politics, with Rabbi Yehoshua Pfeffer", "Haredi rabbi and intellectual Yehoshua Pfeffer explains the internal grass-roots movement pushing ultra-Orthodox society toward military service and economic integration.", ["Yehoshua Pfeffer", "Haredi Integration", "Ultra-Orthodox Politics", "IDF Draft"]],
+      [143, "How to win the Israeli election", "Breaks down the shifting electoral map ahead of Israel's October 2026 national elections, analyzing what voters want on security, the draft, and unity.", ["2026 Elections", "Campaign Strategy", "Centrist Voters", "Coalition Math"]],
+      [142, "Can Gaza ever move on from Hamas? With Ahmed Fouad Alkhatib", "Examines the practical steps required to de-Hamasify Gaza's civil administration, schools, and mosques while offering Gazans an economic horizon.", ["Ahmed Fouad Alkhatib", "Gaza Deradicalization", "Civil Administration", "Post-War Gaza"]],
+      [141, "Why Western ideas crash and burn in the Middle East, with Simon Sebag Montefiore", "Explores how Western diplomats project secular, individualistic assumptions onto a region governed by family, sect, honor, and imperial memory.", ["Simon Sebag Montefiore", "Western Diplomacy", "Sectarianism", "Middle East History"]],
+      [140, "Van Jones returns - The hard questions of Black-Jewish relations", "Van Jones answers listener pushback from his previous appearance, tackling tough questions on affirmative action, BLM, and mutual blind spots.", ["Van Jones", "Black Lives Matter", "Civil Rights Debate", "Black-Jewish Relations"]],
+      [139, "Dara Horn's final solution to the Jewish question", "Dara Horn returns to discuss her new projects on invigorating Jewish literacy and why apologetic defense mechanisms fail to inspire the next generation.", ["Dara Horn", "Jewish Literacy", "Cultural Pride", "Diaspora Education"]],
+      [138, "Why antisemitism works, with Prof. Ruth Wisse", "Harvard scholar Ruth Wisse explains the political utility of antisemitism—how authoritarian and failing societies organize politics around blaming the Jews.", ["Ruth Wisse", "Political Antisemitism", "Scapegoat Mechanism", "Jewish Politics"]],
+      [137, "What does Qatar want?", "Synthesizes Doha's grand strategy of hedging between Washington and Tehran while using massive wealth to buy influence across Western universities and capitals.", ["Qatar", "Soft Power", "Foreign Influence", "Doha Diplomacy"]],
+      [136, "Why not two states from the start?", "Reviews the history of the 1937 Peel Commission and 1947 UN Partition Plan to show why Arab leaders repeatedly rejected Palestinian statehood alongside a Jewish state.", ["1947 Partition Plan", "Peel Commission", "Palestinian Rejectionism", "Mandatory Palestine"]],
+      [135, "Why don't Israelis trust the UN?", "Traces the history of UN bias from the 1975 'Zionism is racism' resolution to automatic General Assembly majorities and peacekeeper failures in Lebanon.", ["United Nations", "UNIFIL", "Diplomatic Bias", "International Institutions"], "https://music.youtube.com/podcast/vg2IJYnJ_N4"],
+      [134, "Was Gaza still occupied after 2005?", "Dissects the legal and factual debate over Israel's 2005 Disengagement, explaining why controlling borders against a hostile terror enclave differs from military occupation.", ["2005 Disengagement", "Occupation Law", "Gaza Blockade", "International Law"]],
+      [133, "Mamdani and America's new left, with Reihan Salam", "Manhattan Institute president Reihan Salam analyzes the rise of democratic socialists in urban American politics and what their platform means for Jewish communities.", ["Reihan Salam", "Zohran Mamdani", "Democratic Socialism", "Urban Politics"]],
+      [132, "What is happening now in Gaza? With Dr. Shira Efron", "Policy expert Shira Efron provides a detailed briefing on post-war transition efforts, humanitarian corridors, and security buffer zones in Gaza.", ["Shira Efron", "Gaza Transition", "Security Zones", "Humanitarian Policy"]],
+      [131, "Why Christians are disappearing from the Middle East, with Amb. George Deek", "Christian Arab Israeli diplomat George Deek explains the centuries-long persecution and demographic collapse of Middle Eastern Christian communities—except in Israel.", ["George Deek", "Middle Eastern Christians", "Minority Rights", "Arab Israelis"]],
+      [130, "Here's to the next 250 years", "Marks the American Semiquincentennial (250th anniversary), celebrating how the American republic created the safest, most prosperous haven in diaspora Jewish history.", ["America 250", "July 4th", "American Republic", "American Jewry"]],
+      [129, "Iran is closer to freedom than you think, with Armin Navabi", "Iranian ex-Muslim activist Armin Navabi explains why widespread secularism and anti-clerical disgust among Iranian youth make the regime terminally brittle.", ["Armin Navabi", "Iranian Secularism", "Youth Protests", "Iranian Regime"]],
+      [128, "Iran, Gaza and the new American right, with Sohrab Ahmari", "Conservative writer Sohrab Ahmari discusses populist skepticism of foreign interventions and how Israel fits into the realigned American right.", ["Sohrab Ahmari", "New Right", "American Populism", "Foreign Intervention"]],
+      [127, "Does Islam hate Jews? With Prof. Meir Litvak", "Islamic studies scholar Meir Litvak traces the evolution of Jewish status in Islam, from medieval dhimmi tolerance to the importation of European antisemitic tropes.", ["Meir Litvak", "Islam and Judaism", "Dhimmi Status", "Islamic Antisemitism"]],
+      [126, "Will your kid's best friend be a robot? With Dr. Micah Goodman", "Steps away from geopolitics to examine how AI companions and algorithms are rewiring human intimacy, childhood development, and community bonds.", ["Micah Goodman", "Artificial Intelligence", "Digital Intimacy", "Childhood Development"]],
+      [125, "Did Netanyahu misread Trump? With Ross Douthat", "New York Times columnist Ross Douthat analyzes the friction between Benjamin Netanyahu's wartime goals and Donald Trump's desire to wrap up foreign conflicts.", ["Ross Douthat", "Netanyahu-Trump Relations", "US-Israel Relations", "Wartime Diplomacy"]],
+      [124, "Vance, Iran and the fight inside Trumpworld, with Matt Continetti", "Historian Matt Continetti examines the ideological tug-of-war within the Republican Party between traditional Reaganite hawks and America First isolationists.", ["Matt Continetti", "JD Vance", "MAGA Foreign Policy", "Republican Party", "Iran"]],
+      [123, "Batya Ungar-Sargon on why the left turned on the Jews", "Journalist Batya Ungar-Sargon argues that as the progressive left became a movement of credentialed elites, it abandoned working-class solidarity and turned on Jews.", ["Batya Ungar-Sargon", "Progressive Elites", "Class Politics", "Left-Wing Antisemitism"]],
+      [122, "When will the war with Iran end?", "Explores the strategic endgames of the direct military confrontation between Israel and Iran, assessing regime durability vs. military exhaustion.", ["Iran War", "Strategic Attrition", "Regime Collapse", "Regional Peace"]],
+      [121, "Who blinks first? The battle for Hormuz, with Rich Goldberg", "Former NSC official Rich Goldberg analyzes naval brinkmanship in the Strait of Hormuz, global energy markets, and US-Iranian escalation dynamics.", ["Rich Goldberg", "Strait of Hormuz", "Energy Security", "Iran"]],
+      [120, "Sam Harris on tribalism, religion, and what actually saves us", "Philosopher Sam Harris debates Haviv on whether religious belief is inherently dangerous, contrasting jihadist martyrdom with Jewish life-affirming peoplehood.", ["Sam Harris", "Religion vs Secularism", "Tribalism", "Jihadism", "Moral Clarity"]],
+      [119, "Canada's Jewish reckoning, with Prof. Gil Troy", "Historian Gil Troy examines how Canada's model of 'mosaic' multiculturalism enabled radical anti-Israel activism to capture civic and academic spaces.", ["Gil Troy", "Canadian Jewry", "Multiculturalism", "Diaspora Reckoning"]],
+      [118, "Is Israel a settler-colonial state? A historian's honest answer, with Alex Yakobson", "Compares the Zionist return to historic homelands against actual European settler-colonial models like Algeria, South Africa, and North America.", ["Alexander Yakobson", "Settler-Colonialism", "Historical Comparison", "Zionism"]],
+      [117, "The Palestinian insider who thinks Hamas is losing, with Samer Sinijlawi", "Fatah dissident Samer Sinijlawi explains why Palestinian public opinion is turning against Hamas and how a pragmatic new leadership could emerge.", ["Samer Sinijlawi", "Palestinian Politics", "Fatah Reform", "Anti-Hamas Sentiment"]],
+      [116, "Simon Sebag Montefiore on the History — and Future — of British Jews", "Historian Simon Sebag Montefiore traces the rich history of Jews in Britain from medieval expulsion to modern prominence and contemporary anxieties.", ["Simon Sebag Montefiore", "British Jewry", "United Kingdom", "Antisemitism"]],
+      [115, "Is Nicholas Kristof right?", "Addresses New York Times columnist Nicholas Kristof's critiques of Israel's war conduct, separating valid humanitarian concerns from flawed strategic premises.", ["Nicholas Kristof", "New York Times", "Humanitarian Critique", "Media Bias"]],
+      [114, "Why don't we talk about Egypt?", "Unpacks Egypt's massive demographic crunch, debt crisis, and military economy, explaining why Cairo's stability is a paramount Israeli security interest.", ["Egypt", "Sisi Regime", "Cold Peace", "Regional Stability"]],
+      [113, "Will dumping Israel backfire on the Democrats? A conversation with Hussein Mansour", "Analyzes the electoral math and ideological drift inside the Democratic Party, arguing that catering to anti-Israel fringes alienates moderate majorities.", ["Hussein Aboubakr Mansour", "Democratic Party", "US Elections", "US-Israel Relations"]],
+      [112, "Why the world Is obsessed with Zionism, with Alana Newhouse", "Tablet editor Alana Newhouse explores why Western cultural institutions fixated on Zionism as an all-purpose scapegoat for their own internal crises.", ["Alana Newhouse", "Western Culture", "Zionism", "Institutional Decay"]],
+      [111, "How Somaliland and Israel became fast friends, with Amb. Mohamed Hagi", "Somaliland envoy Mohamed Hagi explains the shared history, democratic resilience, and Red Sea security interests uniting Hargeisa and Jerusalem.", ["Mohamed Hagi", "Somaliland", "Bilateral Ties", "Red Sea Security"]],
+      [110, "Van Jones on what broke the Black-Jewish alliance", "CNN commentator Van Jones joins Haviv for a candid conversation on progressive oppression hierarchies, campus friction, and how to repair Black-Jewish ties.", ["Van Jones", "Black-Jewish Relations", "Progressive Politics", "Coalition Building"]],
+      [109, "The crisis no one is talking about in Canada, with Dr. Casey Babb", "Security expert Casey Babb details the alarming surge in firebombings, shootings, and institutional intimidation targeting Canada's Jewish community.", ["Casey Babb", "Canadian Jewry", "Antisemitic Violence", "Domestic Security"]],
+      [108, "How personal grief built a nation", "Reflects on Yom HaZikaron (Memorial Day), showing how Israel's intimate, nationwide culture of mourning fallen soldiers binds its fractious society together.", ["Yom HaZikaron", "Memorial Day", "Bereavement", "National Solidarity"]],
+      [107, "What does Ezra Klein get wrong?", "Critiques American progressive commentary on Israel, showing how viewing the Middle East through an American racial and civil-rights lens distorts reality.", ["Ezra Klein", "American Liberalism", "Media Critique", "US-Israel Relations"]],
+      [106, "After October 7, can Israeli politics be rebuilt? A conversation with Dr. Einat Wilf", "Explores how the collapse of pre-war political paradigms creates an opportunity to realign Israel's fractured coalition system around core national priorities.", ["Einat Wilf", "Political Realignment", "Israeli Coalition Politics", "Post-War Reform"]],
+      [105, "Why don't we talk about Jordan?", "Examines the quiet strategic vitality of the Hashemite Kingdom, which buffers Israel's longest border while managing massive demographic and Islamist pressures.", ["Jordan", "Hashemite Kingdom", "Border Security", "Regional Stability"]],
+      [104, "The Iran war isn't over", "Analyzes the fragile pause in direct strikes between Israel and Iran, warning that unfinished nuclear and missile threats guarantee future rounds.", ["Iran War", "War of Attrition", "Nuclear Threat", "Ballistic Missiles"]],
+      [103, "Why is the two state solution so difficult to achieve?", "Moves past slogans to examine the deep structural, geographic, security, and ideological roadblocks that have repeatedly derailed two-state frameworks.", ["Two-State Solution", "West Bank Security", "Palestinian Statehood", "Peace Process"]],
+      [102, "Freedom under missile fire, the Passover story, with Rabbi David Stav", "Tzohar founder Rabbi David Stav discusses celebrating Passover under Iranian missile barrages and what the Exodus teaches about national resilience.", ["Rabbi David Stav", "Passover", "Exodus Story", "Home Front Resilience"]],
+      [101, "Will Trump finish the job in Iran? With Prof. Dan Schueftan", "Evaluates President Trump's appetite for decisive military escalation against Tehran versus his instinct for transactional diplomatic deal-making.", ["Dan Schueftan", "Trump Iran Policy", "Military Escalation", "Transactional Diplomacy"]],
+      [100, "They escaped Europe — then parachuted back in, with Matti Friedman", "Celebrates the 100th episode with Matti Friedman, telling the heroic story of Jewish paratroopers from Mandatory Palestine who jumped into Nazi-occupied Europe.", ["Matti Friedman", "Jewish Paratroopers", "Hannah Szenes", "World War II"]],
+      [99, "Are we winning?", "Conducts a candid mid-war audit of Israel's military gains against Hamas, Hezbollah, and Iran versus its diplomatic, economic, and societal exhaustion.", ["War Assessment", "Strategic Audit", "National Attrition", "Military Gains"]],
+      [98, "What Israel's founding fathers knew about terrorism, with Dr. Bruce Hoffman", "Terrorism scholar Bruce Hoffman examines early Zionist counter-insurgency doctrines and the historical efficacy of British and Israeli counter-terror strategies.", ["Bruce Hoffman", "Counter-Terrorism", "British Mandate", "Zionist Founders"]],
+      [97, "Can America and Israel finish the job? A conversation with John Spencer", "Assesses combined US-Israeli military operations against Iranian nuclear and ballistic missile infrastructure and what defines decisive strategic victory.", ["John Spencer", "US-Israel Joint Operations", "Iran War", "Strategic Victory"]],
+      [96, "The first war Israel fought in English, with Yaakov Katz", "Author and journalist Yaakov Katz analyzes how the global battle for public opinion made English-language media and tech platforms a primary front of the war.", ["Yaakov Katz", "Information Warfare", "Public Diplomacy", "Global Media"]],
+      [95, "The idea that broke the Middle East, with Dr. Micah Goodman", "Philosopher Micah Goodman explores the ideological clash between modern nation-state pluralism and imperialist religious uniformity in the region.", ["Micah Goodman", "Middle East Philosophy", "Religious Extremism", "Pluralism"]],
+      [94, "America's war, not Israel's", "Explains why escalating confrontations with Iran and its Houthi proxies represent a direct assault on US global trade routes and superpower credibility.", ["US Grand Strategy", "Maritime Security", "Iranian Aggression", "Global Trade"]],
+      [93, "How to win Iran's forever war", "Argues that defeating Tehran's 'ring of fire' strategy requires shifting the cost of war directly onto the Iranian regime's homeland assets rather than fighting only its proxies.", ["Iran Strategy", "Ring of Fire", "Asymmetric Warfare", "Direct Deterrence"]],
+      [92, "Why does Israel hate UNRWA?", "Details how UNRWA's unique, hereditary refugee definition perpetuates the conflict and how its Gaza infrastructure became deeply entangled with Hamas.", ["UNRWA", "Palestinian Refugees", "Right of Return", "Hamas Infiltration"]],
+      [91, "Is the Iran war about China? A conversation with Melissa Chen", "Journalist Melissa Chen places the Middle East war in a global context, examining how Beijing uses Iranian oil and chaos to drain American military bandwidth.", ["Melissa Chen", "China-Iran Axis", "Great Power Competition", "Indo-Pacific Strategy"]],
+      [90, "Is it 'fascist' to believe a state can belong to a specific people?", "Defends the concept of the nation-state, showing how national self-determination is the bedrock of European democracies rather than an Israeli aberration.", ["Nation-State Law", "Self-Determination", "Liberal Nationalism", "Political Theory"]],
+      [89, "Who benefits from continuing the Israeli-Palestinian conflict?", "Follows the money and political incentives of corrupt leaders, regional autocrats, and international agencies that profit from keeping the conflict unsolved.", ["Conflict Economy", "Political Incentives", "Palestinian Leadership", "Regional Autocrats"]],
+      [88, "America's '24% problem' with young antisemitism, with Jonah Platt", "Podcaster and advocate Jonah Platt discusses polling showing rising antisemitic attitudes among Gen Z Americans and how to counter digital radicalization.", ["Jonah Platt", "Gen Z Antisemitism", "Social Media Radicalization", "American Jewry"]],
+      [87, "How can you support a better Palestinian future?", "Argues that genuine pro-Palestinian advocacy requires demanding accountable governance, deradicalization, and an end to the cult of 'resistance.'", ["Palestinian Future", "Deradicalization", "State-Building", "Constructive Advocacy"]],
+      [86, "Alliances and rivalries in a new Middle East, with Dan Schueftan", "Maps the emerging regional architecture as pragmatic Arab states quietly align with Israel against Iranian hegemony and Turkish Neo-Ottomanism.", ["Dan Schueftan", "Regional Alliances", "Sunni-Israel Alignment", "Realpolitik"]],
+      [85, "How knowing your story makes you invincible, with Noam Weissman", "Unpacked executive vice president Noam Weissman discusses why nuanced, honest Jewish historical education is the ultimate vaccine against ideological demoralization.", ["Noam Weissman", "Jewish Education", "Historical Literacy", "Zionism"]],
+      [84, "Why soldiers wept when Ran came home, lessons from Tu Bishvat", "Connects the emotional return of hostages to the Jewish holiday of Tu Bishvat, exploring themes of deep rootedness, renewal, and mutual responsibility.", ["Tu Bishvat", "Hostage Return", "IDF Ethos", "Jewish Solidarity"]],
+      [83, "From ideology to narcotics, Hezbollah's business model, with Matt Levitt", "Counter-terrorism expert Matt Levitt exposes how Hezbollah funds its terror army through global cocaine trafficking, Captagon trade, and illicit finance.", ["Matt Levitt", "Hezbollah", "Narco-Terrorism", "Illicit Finance"]],
+      [82, "'From the River to the Sea' - Lost in Translation?", "Compares the sanitized Western progressive interpretation of the chant with its explicit Arabic meaning of eradicating the Jewish state.", ["From the River to the Sea", "Arabic Translation", "Political Slogans", "Antizionism"]],
+      [81, "Israel's future and the ticking Gaza clock, with Andrew Fox", "Former British paratrooper Major Andrew Fox assesses the tactical timeline in Gaza and the strategic pressures mounting on the IDF.", ["Andrew Fox", "Military Assessment", "Gaza War", "Urban Warfare"]],
+      [80, "Who is Hamas and what do they want?", "Provides a foundational primer on Hamas's Muslim Brotherhood roots, its 1988 charter, and why governance is always subordinate to jihad in its worldview.", ["Hamas Ideology", "Muslim Brotherhood", "Islamist Ideology", "Gaza Governance"]],
+      [79, "Breaking Iran's machinery of oppression", "Outlines how targeted strikes, cyber disruption, and support for striking workers can paralyze the IRGC's domestic apparatus of control.", ["IRGC", "Iranian Opposition", "Regime Disruption", "Iran"]],
+      [78, "Do you still want to globalize the intifada?", "Connects Western protest chants to real-world terror attacks against diaspora Jewish institutions, exposing the violent reality of 'globalizing the intifada.'", ["Globalize the Intifada", "Diaspora Security", "Protest Rhetoric", "Antisemitism"]],
+      [77, "Did Israel intentionally target civilians in Gaza?", "Reviews IDF targeting protocols, evacuation warnings, and urban combat realities to refute allegations of deliberate civilian targeting.", ["IDF Targeting Protocols", "Civilian Casualties", "Gaza War", "International Law"]],
+      [76, "How elites drive Jew-hatred, with Hussein Aboubakr Mansour", "Analyzes why antisemitism historically originates not from the uneducated masses, but from intellectual, clerical, and academic elites seeking to explain societal failure.", ["Hussein Aboubakr Mansour", "Elite Antisemitism", "Intellectual History", "Scapegoat Mechanism"]],
+      [75, "Power, fear, and the survival of the Iranian regime, with Roya Hakakian", "Iranian-American writer Roya Hakakian examines the mechanisms of state terror in Tehran and why internal fractures are threatening the ayatollahs' grip.", ["Roya Hakakian", "Iranian Regime", "State Terror", "Iranian Dissidents"]],
+      [74, "Why the global outrage at Israel's Somaliland recognition?", "Explores the geopolitical shockwaves and Red Sea strategic calculus behind Israel's diplomatic engagement with the breakaway republic of Somaliland.", ["Somaliland", "Horn of Africa", "Red Sea Security", "Diplomatic Recognition"]],
