@@ -30,8 +30,8 @@
 
   <!-- ========================================================================= -->
   <!-- PATREON COMMUNITY GATE OVERLAY                                            -->
-  <!-- Default Passcode: aha-patron                                              -->
-  <!-- Magic Auto-Unlock URL: https://beezer34.github.io/Haviv/?unlock=aha-patron -->
+  <!-- Passcode: aha-patron                                                      -->
+  <!-- Magic Link: https://beezer34.github.io/Haviv/?unlock=aha-patron           -->
   <!-- ========================================================================= -->
   <div id="patreonGate" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl text-center">
@@ -47,9 +47,9 @@
         This searchable episode directory is built for the <strong class="text-slate-200">Ask Haviv Anything</strong> Patreon community to find and share episodes with family and friends.
       </p>
 
-      <form onsubmit="verifyCommunityAccess(event)" class="mt-6 space-y-3">
+      <form onsubmit="verifyCommunityAccess(event); return false;" class="mt-6 space-y-3">
         <input type="password" id="gatePasscode" required placeholder="Enter Community Passcode..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-sm text-center text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
-        <p id="gateError" class="hidden text-xs text-rose-400">Invalid passcode. Please check the Patreon community post or join below.</p>
+        <p id="gateError" class="hidden text-xs text-rose-400 font-medium">Invalid passcode. Please check the Patreon community post or join below.</p>
         <button type="submit" class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow">
           Unlock Episode Index
         </button>
@@ -169,7 +169,7 @@
         Adding an episode here saves it immediately in your browser's local storage AND generates the single-line JSON entry so you can paste it into <code class="text-amber-300">RAW_EPISODES</code> inside <code class="text-amber-300">index.html</code> for permanent hosting.
       </p>
 
-      <form onsubmit="addCustomEpisode(event)" class="mt-4 space-y-3">
+      <form onsubmit="addCustomEpisode(event); return false;" class="mt-4 space-y-3">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="block text-xs text-slate-400 mb-1">Episode # *</label>
@@ -218,54 +218,61 @@
   <script>
     // ============================================================================
     // PATREON GATE AUTHENTICATION (Passcode: "aha-patron" or ?unlock=aha-patron)
+    // Synchronous & robust check for both HTTPS and local file:// testing
     // ============================================================================
-    const ACCESS_HASH = "82246a9c4a6b7339150275e347e8836731f21d58b4e3866c96303d61e52a1675";
+    const CORRECT_PASSCODE = "aha-patron";
     const AUTH_STORAGE_KEY = "aha_patreon_unlocked_v1";
 
-    async function sha256(str) {
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str.trim().toLowerCase()));
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    function checkPasscode(input) {
+      if (!input) return false;
+      return input.trim().toLowerCase() === CORRECT_PASSCODE;
     }
 
-    async function initGate() {
-      const gate = document.getElementById("patreonGate");
-      if (localStorage.getItem(AUTH_STORAGE_KEY) === ACCESS_HASH) {
-        gate.classList.add("hidden");
-        return;
-      }
+    // Run immediately before DOM paints to prevent flash
+    (function initGateSync() {
       const params = new URLSearchParams(window.location.search);
       const magicKey = params.get("unlock");
-      if (magicKey && (await sha256(magicKey)) === ACCESS_HASH) {
-        localStorage.setItem(AUTH_STORAGE_KEY, ACCESS_HASH);
+      if (magicKey && checkPasscode(magicKey)) {
+        localStorage.setItem(AUTH_STORAGE_KEY, "true");
         window.history.replaceState({}, document.title, window.location.pathname);
-        gate.classList.add("hidden");
       }
-    }
+    })();
 
-    async function verifyCommunityAccess(e) {
-      e.preventDefault();
-      const input = document.getElementById("gatePasscode").value;
-      const hash = await sha256(input);
-      if (hash === ACCESS_HASH) {
-        localStorage.setItem(AUTH_STORAGE_KEY, ACCESS_HASH);
+    function verifyCommunityAccess(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const inputEl = document.getElementById("gatePasscode");
+      const errorEl = document.getElementById("gateError");
+      
+      if (checkPasscode(inputEl.value)) {
+        localStorage.setItem(AUTH_STORAGE_KEY, "true");
         document.getElementById("patreonGate").classList.add("hidden");
-        document.getElementById("gateError").classList.add("hidden");
+        errorEl.classList.add("hidden");
       } else {
-        document.getElementById("gateError").classList.remove("hidden");
+        errorEl.classList.remove("hidden");
+        inputEl.value = "";
+        inputEl.focus();
       }
+      return false;
     }
 
     function lockSite() {
       localStorage.removeItem(AUTH_STORAGE_KEY);
       document.getElementById("gatePasscode").value = "";
+      document.getElementById("gateError").classList.add("hidden");
       document.getElementById("patreonGate").classList.remove("hidden");
     }
 
-    initGate();
+    window.addEventListener("DOMContentLoaded", () => {
+      const gate = document.getElementById("patreonGate");
+      if (localStorage.getItem(AUTH_STORAGE_KEY) === "true") {
+        gate.classList.add("hidden");
+      } else {
+        gate.classList.remove("hidden");
+      }
+    });
 
     // ============================================================================
     // MASTER EPISODE DATABASE (Episodes 0 to 153)
-    // Format: [epNumber, "Title", "1-2 sentence summary", ["Tag1", "Tag2", ...], "optionalDirectURL"]
     // ============================================================================
     const RAW_EPISODES = [
       [153, "Where was Netanyahu on 7/10? With Elliot Kaufman", "Wall Street Journal editor Elliot Kaufman joins Haviv to examine the internal rivalries, decision-making, and conduct of Israel's wartime cabinet on and after October 7.", ["Elliot Kaufman", "Benjamin Netanyahu", "October 7 Decision-Making", "War Cabinet"]],
@@ -348,3 +355,177 @@
       [76, "How elites drive Jew-hatred, with Hussein Aboubakr Mansour", "Analyzes why antisemitism historically originates not from the uneducated masses, but from intellectual, clerical, and academic elites seeking to explain societal failure.", ["Hussein Aboubakr Mansour", "Elite Antisemitism", "Intellectual History", "Scapegoat Mechanism"]],
       [75, "Power, fear, and the survival of the Iranian regime, with Roya Hakakian", "Iranian-American writer Roya Hakakian examines the mechanisms of state terror in Tehran and why internal fractures are threatening the ayatollahs' grip.", ["Roya Hakakian", "Iranian Regime", "State Terror", "Iranian Dissidents"]],
       [74, "Why the global outrage at Israel's Somaliland recognition?", "Explores the geopolitical shockwaves and Red Sea strategic calculus behind Israel's diplomatic engagement with the breakaway republic of Somaliland.", ["Somaliland", "Horn of Africa", "Red Sea Security", "Diplomatic Recognition"]],
+      [73, "Is military aid to Israel a good deal for America?", "Breaks down the defense economics of US military assistance, showing how aid subsidizes American defense manufacturing and provides combat-tested R&D.", ["US Military Aid", "Defense Industrial Base", "US-Israel Relations", "Foreign Assistance"]],
+      [72, "The women fighters behind the Warsaw Ghetto Uprising, with Elizabeth R. Hyman", "Historian Elizabeth R. Hyman highlights the female couriers, smugglers, and commanders who spearheaded Jewish armed resistance against the Nazis.", ["Warsaw Ghetto Uprising", "Elizabeth R. Hyman", "Holocaust Resistance", "Jewish History"]],
+      [71, "Why the heck does America support Israel?", "Dispels lobby conspiracy theories by detailing the cold strategic intelligence, technological, and cultural alignments underpinning the US-Israel alliance.", ["US-Israel Relations", "American Foreign Policy", "Strategic Partnership", "Shared Values"]],
+      [70, "The warrior Jews who terrified Rome, with Barry Strauss", "Classicist Barry Strauss recounts the fierce military campaigns of the Jewish revolts against the Roman Empire, from Judea to the diaspora.", ["Barry Strauss", "Jewish-Roman Wars", "Ancient History", "Bar Kokhba Revolt"]],
+      [69, "Israel's great divide - An insider's look at the judicial reform, with Moshe Koppel", "Kohelet Policy Forum founder Moshe Koppel explains the conservative legal rationale behind the judicial overhaul and what went wrong in its execution.", ["Moshe Koppel", "Kohelet Forum", "Judicial Reform", "Supreme Court"]],
+      [68, "Antizionism is inherently violent, with Adam Louis-Klein", "Argues that antizionism is not a peaceful political opinion, as dismantling an existing nation-state of ten million people inherently requires mass violence.", ["Adam Louis-Klein", "Antizionism", "Political Violence", "Ideological Critique"]],
+      [67, "Miracles in the dark. A response to Bondi", "Reflects on the Hanukkah story and Jewish resilience in the wake of antisemitic violence in Australia, contrasting Maccabean grit with modern fear.", ["Hanukkah", "Bondi Attack", "Australian Jewry", "Jewish Resilience"]],
+      [66, "Do BDS campaigns help Palestinians?", "Demonstrates how the Boycott, Divestment, and Sanctions movement harms Palestinian workers and entrenches conflict rather than fostering statehood.", ["BDS Movement", "Economic Boycotts", "Palestinian Economy", "Performative Activism"]],
+      [65, "The unseen editors rigging the information war, with Ashley Rindsberg", "Investigative author Ashley Rindsberg exposes how coordinated networks of editors manipulate Wikipedia and mainstream media to rewrite the Israeli-Palestinian conflict.", ["Ashley Rindsberg", "Wikipedia Bias", "Information Warfare", "Media Bias"]],
+      [64, "The Soviet roots of today's antizionism, with Izabella Tabarovsky", "Scholar Izabella Tabarovsky proves how slogans and tropes used on Western campuses today were engineered by KGB propagandists during the Cold War.", ["Izabella Tabarovsky", "Soviet Zionology", "KGB Propaganda", "Antizionism"]],
+      [63, "New York in the age of Tucker and Mamdani, with Noam Dworman", "Comedy Cellar owner Noam Dworman discusses the pincer movement of far-left socialist politics (Zohran Mamdani) and far-right isolationism (Tucker Carlson).", ["Noam Dworman", "New York Politics", "Zohran Mamdani", "Tucker Carlson", "Horseshoe Theory"]],
+      [62, "Hard times make strong Jews. Live in London with Daniel Schwammenthal", "Recorded live in London, this discussion examines the crisis facing British Jewry and how diaspora communities build institutional backbone under pressure.", ["British Jewry", "London", "Daniel Schwammenthal", "Diaspora Resilience"]],
+      [61, "Is criticizing Israel antisemitic?", "Establishes clear analytical boundaries between legitimate policy criticism of an Israeli government and the demonization of the Jewish state's existence.", ["IHRA Definition", "Antisemitism", "Double Standards", "Antizionism"]],
+      [60, "Does it matter what the world thinks? A conversation with Dr. Tal Becker", "Legal advisor Dr. Tal Becker weighs Ben-Gurion's maxim against the real-world diplomatic, economic, and legal costs of international isolation.", ["Tal Becker", "International Legitimacy", "International Law", "Israeli Diplomacy"]],
+      [59, "Are Jews indigenous to Israel?", "Deconstructs academic efforts to erase Jewish history, presenting the archaeological, linguistic, and genetic proof of Jewish indigeneity in the Levant.", ["Jewish Indigeneity", "Levant History", "Archaeology", "Zionism"]],
+      [58, "Rebuilding after disaster with ex-hostage Tal Shoham", "Former hostage Tal Shoham describes his captivity in Gaza and the process of rehabilitating his family and community after returning home.", ["Tal Shoham", "Hostage Testimony", "Kibbutz Be'eri", "Rehabilitation"]],
+      [57, "When human rights NGOs fail, with Daniel Balson and Danielle Haas", "Former human rights insiders explain how ideological capture and double standards corrupted major international NGOs regarding Israel.", ["Human Rights NGOs", "Institutional Bias", "Amnesty International", "Human Rights Watch"]],
+      [56, "The industrial revolution of prehistoric Israel, with Tom Levy", "Archaeologist Tom Levy explores ancient copper mining and technological leaps in the Levant during the Bronze and Iron Ages.", ["Tom Levy", "Biblical Archaeology", "Prehistoric Israel", "Ancient History"]],
+      [55, "The real war is not in Gaza, with Dr. Einat Wilf", "Dr. Einat Wilf argues that physical combat in Gaza is secondary to the ideological war against the Palestinian ethos of undoing 1948.", ["Einat Wilf", "Right of Return", "Ideological Warfare", "1948 War"]],
+      [54, "Can Israel be both Sparta and Athens? With Dan Schueftan", "National security scholar Dan Schueftan debates how Israel can maintain a ruthless military edge ('Sparta') alongside a thriving liberal economy ('Athens').", ["Dan Schueftan", "National Security", "Sparta and Athens", "Israeli Economy"]],
+      [53, "Telling the Jewish story to the Arab world, with Elhanan Miller", "Rabbi and Arabist Elhanan Miller discusses his digital outreach bridging cultural divides by explaining Judaism and Israeli society in Arabic.", ["Elhanan Miller", "Arabic Outreach", "Interfaith Dialogue", "Public Diplomacy"]],
+      [52, "Why do people hate Jews, with Dara Horn", "Author Dara Horn unpacks the cultural mechanisms of antisemitism and how Western societies use dead Jews as moral symbols while ignoring living ones.", ["Dara Horn", "Antisemitism", "Holocaust Memory", "Jewish Identity"]],
+      [51, "Antisemitism and the Black experience", "Explores the historical parallels, shared struggles, and ideological divergences between Black and Jewish experiences of racism and persecution in the West.", ["Black-Jewish Relations", "Antisemitism", "Civil Rights", "Identity Politics"]],
+      [50, "Hostage Deal - A new day for Gaza, a bad day for Hamas", "Analyzes the strategic trade-offs of the hostage release agreement and why the ceasefire terms represent a structural defeat for Hamas's war aims.", ["Hostage Deal", "Ceasefire Agreement", "Hamas Defeat", "Gaza War"]],
+      [49, "Finding hope in the tunnel of Hamas, with Eli Sharabi", "Released hostage Eli Sharabi shares his harrowing survival story inside Hamas tunnels and how he maintained psychological resilience after losing his family.", ["Eli Sharabi", "Hostage Testimony", "Hamas Tunnels", "Resilience"]],
+      [48, "Two years to October 7", "Marks the second anniversary of the October 7 massacres, assessing how the trauma transformed Israeli society, security doctrine, and global Jewry.", ["October 7 Anniversary", "National Memory", "Israeli Society", "Historical Trauma"]],
+      [47, "Building a new Gaza, with Ahmed Fouad Alkhatib", "Gaza-born analyst Ahmed Fouad Alkhatib outlines a pragmatic, anti-Hamas vision for Palestinian governance, reconstruction, and coexistence.", ["Ahmed Fouad Alkhatib", "Gaza Reconstruction", "Palestinian Reform", "Post-War Gaza"]],
+      [46, "The Trump Plan - Hope for Israel and Gaza", "Evaluates the incoming Trump administration's framework for ending the Gaza war, releasing hostages, and reshaping regional alliances.", ["Trump Peace Plan", "US-Israel Relations", "Gaza Reconstruction", "Diplomatic Leverage"]],
+      [45, "48 hours in Syria, with David Horovitz", "Times of Israel founding editor David Horovitz discusses rapid developments across the Syrian border and their implications for Israel's northern front.", ["David Horovitz", "Syria", "Northern Front", "Golan Heights"]],
+      [44, "Fateful choices to make in the new year, a comment for Rosh Hashanah", "Offers a Rosh Hashanah reflection on the existential political and moral choices facing Israeli society after two years of grinding multi-front war.", ["Rosh Hashanah", "National Reckoning", "Jewish Philosophy", "Israeli Resilience"]],
+      [43, "After Doha, Israel needs a new story", "Argues that as diplomatic negotiations in Doha stall, Israel must articulate a clear, proactive strategic vision for the region rather than reacting to events.", ["Doha Talks", "Israeli Grand Strategy", "Public Diplomacy", "Post-War Vision"]],
+      [42, "Why is Egypt so scared to open its border with Gaza? With Mariam Wahba", "Examines Cairo's terror of Muslim Brotherhood infiltration, Sinai instability, and the economic pressures driving Egypt's closed-border policy at Rafah.", ["Egypt", "Rafah Crossing", "Sinai Security", "Mariam Wahba", "Muslim Brotherhood"]],
+      [41, "The rise and fall of Ottoman Jewry with Dr. Hay Eytan Cohen Yanarocak", "Traces the centuries-long prosperity of Sephardic Jews in the Ottoman Empire and the nationalist pressures that led to their eventual decline.", ["Ottoman Empire", "Sephardic Jews", "Turkey", "Hay Eytan Cohen Yanarocak"]],
+      [40, "You still need real life spies to win", "Explains why over-reliance on cyber technology failed on October 7 and why human intelligence (HUMINT) remains irreplaceable in modern warfare.", ["Human Intelligence", "Espionage", "Cyber Warfare", "Intelligence Failure"]],
+      [39, "Fear and loathing in the diaspora, live in Oslo with Bjørn Gabrielsen", "Recorded live in Norway, this conversation explores the spike in European antisemitism and the isolating experience of Nordic Jews post-October 7.", ["European Antisemitism", "Norway", "Bjørn Gabrielsen", "Jewish Diaspora"]],
+      [38, "What will it take to defeat Hamas? With Prof. John Spencer", "Assesses the remaining military requirements to dismantle Hamas's battalions and prevent its regeneration as a governing insurgency.", ["John Spencer", "Defeating Hamas", "Counter-Insurgency", "Gaza War"]],
+      [37, "The genocidal claim of genocide with Adam Louis-Klein", "Anthropologist Adam Louis-Klein examines how the accusation of genocide is inverted and weaponized to strip Israel of its right to self-defense.", ["Adam Louis-Klein", "Genocide Inversion", "Antizionism", "Rhetorical Warfare"]],
+      [36, "How marginalized Mizrahim became Israel's first spies", "Tells the story of the 'Arab Section,' where Arabic-speaking Jewish immigrants conducted deep-cover espionage across enemy borders in 1948.", ["Mizrahi Jews", "Palmach Arab Section", "1948 War", "Espionage"]],
+      [35, "Solving hunger in Gaza with Prof. Yannay Spitzer", "Economic historian Yannay Spitzer analyzes famine metrics, market mechanisms, and practical ways to flood conflict zones with food without empowering Hamas.", ["Yannay Spitzer", "Famine Economics", "Gaza Aid", "Supply Chains"]],
+      [34, "My life in Al-Qaeda, a conversation with Aimen Dean", "Former Al-Qaeda bomb-maker turned MI6 spy Aimen Dean shares an insider account of jihadist psychology, recruitment, and counter-terrorism.", ["Aimen Dean", "Al-Qaeda", "Espionage", "Jihadism", "Counter-Terrorism"]],
+      [33, "Thoughts for Tisha B'Av - We live in history", "Reflects on the traditional Jewish day of mourning for the destroyed Temples, drawing warnings about internal baseless hatred and national survival.", ["Tisha B'Av", "Jewish Mourning", "Sinat Chinam", "Social Cohesion"]],
+      [32, "Hunger and the Gaza war", "Separates Western media narratives from logistical realities on the ground, examining food distribution collapses, looting, and aid bottlenecks in Gaza.", ["Gaza Aid", "Humanitarian Logistics", "Aid Distribution", "Media Bias"]],
+      [31, "The century-old harbinger of October 7, a conversation with Yardena Schwartz", "Author Yardena Schwartz links the 1929 Hebron massacre to October 7, illustrating how Haj Amin al-Husseini's incitement established a century-long template of violence.", ["Yardena Schwartz", "1929 Hebron Massacre", "Haj Amin al-Husseini", "October 7 Roots"]],
+      [30, "How the Middle East broke, a conversation with Hussein Aboubakr Mansour", "Intellectual Hussein Aboubakr Mansour traces the collapse of Arab modernization projects and the rise of nihilistic ideological movements.", ["Hussein Aboubakr Mansour", "Arab Intellectual History", "Arab Nationalism", "Political Islam"]],
+      [29, "Can Israel make peace with Joulani? A conversation with Druze activist Rania Fadel Dean", "Evaluates the rise of Ahmad al-Sharaa (Joulani) in post-Assad Syria and the precarious security plight of Syria's Druze minority.", ["Syria", "Abu Mohammad al-Joulani", "Druze Minority", "Rania Fadel Dean"]],
+      [28, "The Gaza Paradox", "Explores the strategic catch-22 in Gaza where military victory requires replacing Hamas governance, yet no viable external actor is willing to step in.", ["Post-War Gaza", "Strategic Paradox", "Counter-Insurgency", "Hamas Rule"]],
+      [27, "Music amidst trauma - a conversation on life in a war with Aya Korem and Adam Ben Amitai", "Israeli musicians Aya Korem and Adam Ben Amitai discuss creating art, processing national grief, and finding cultural resilience during wartime.", ["Israeli Music", "Aya Korem", "Adam Ben Amitai", "Wartime Culture"]],
+      [26, "How Iran's regime subverted Shia Islam - with Hussain Abdul-Hussain", "Research fellow Hussain Abdul-Hussain explains how Khomeini's doctrine of clerical rule hijacked traditional quietist Shia theology for revolutionary ends.", ["Hussain Abdul-Hussain", "Shia Islam", "Velayat-e Faqih", "Iranian Regime"]],
+      [25, "What is happening in Gaza?", "Provides an operational and humanitarian status report on the ground realities in Gaza, examining IDF clearing operations and governance voids.", ["Gaza War", "Civilian Governance", "Hamas Insurgency", "Gaza Aid"]],
+      [24, "With Iran down, Turkey steps into the breach - with Dr. Hay Eytan Cohen Yanarocak", "Examines President Erdogan's neo-Ottoman ambitions and how Ankara is positioning itself to fill the regional power vacuum left by a weakened Iran.", ["Turkey", "Recep Tayyip Erdogan", "Neo-Ottomanism", "Syria", "Hay Eytan Cohen Yanarocak"]],
+      [23, "Iran bows out", "Analyzes Tehran's strategic hesitation and recalculations following severe Israeli military strikes against its proxy forces and air defense networks.", ["Iran", "Proxy Warfare", "Escalation Dominance", "IDF Strikes"]],
+      [22, "A new dawn in the Middle East?", "Assesses the shifting balance of regional power as Israel degrades Iran's proxy network and reshapes strategic realities across the Levant.", ["Regional Geopolitics", "Axis of Resistance", "Balance of Power", "Middle East Strategy"]],
+      [21, "Why won't Haredim serve in the IDF?", "Unpacks the theological fears, historical trauma, and sociological insulation driving ultra-Orthodox resistance to mandatory military conscription.", ["IDF Draft", "Haredi Integration", "Ultra-Orthodox Society", "Religion and State"]],
+      [20, "Regime change in Iran? What the 1979 revolution can teach us", "Analyzes the coalition of forces that toppled the Shah in 1979 to assess what it would actually take to overthrow the Islamic Republic today.", ["1979 Iranian Revolution", "Regime Change", "Ayatollah Khomeini", "Iranian Regime"]],
+      [19, "Iran faces a humbler, more dangerous Israel", "Examines how the intelligence failures of October 7 stripped away Israeli hubris, creating a far more aggressive and risk-intolerant military posture toward Tehran.", ["Iran War", "Strategic Deterrence", "Military Doctrine", "Post-October 7"]],
+      [18, "Taking on the ayatollahs with Mark Dubowitz", "FDD CEO Mark Dubowitz outlines comprehensive economic sanctions, military deterrence, and political strategies to counter the Iranian regime.", ["Mark Dubowitz", "Iran Sanctions", "Maximum Pressure", "Iran"]],
+      [17, "The Gaza war began 25 years ago, a conversation with Matti Friedman", "Journalist Matti Friedman explains how the ideological templates, media narratives, and military dynamics of the current war were forged in the year 2000.", ["Matti Friedman", "Second Intifada", "Media Bias", "Gaza War"]],
+      [16, "Hamas and the broken promise of 150 years of Islamic reform", "Traces the intellectual history of modern political Islam, showing how 19th-century reform movements curdled into the fundamentalist violence of Hamas.", ["Islamic Reform", "Political Islam", "Hamas Ideology", "Muslim Brotherhood"]],
+      [15, "Jerusalem Day, a modern redemption story", "Reflects on the historical and spiritual duality of Jerusalem Day, tracing the city's journey from ancient destruction to modern reunification.", ["Jerusalem Day", "1967 Six-Day War", "Jewish Redemption", "Jewish History"]],
+      [14, "Should Israel give up on international law? A conversation with a former IDF lawyer", "Explores how international legal bodies are weaponized against the IDF and why maintaining internal military legal standards remains vital for Israel.", ["International Law", "IDF Legal Corps", "Lawfare", "Rules of Engagement"]],
+      [13, "John Spencer on war, morality, politics and the fight for the future", "Evaluates the intersection of international humanitarian law, civilian casualty ratios, and the politicization of military ethics in modern urban combat.", ["John Spencer", "International Law", "Military Ethics", "Civilian Casualties"]],
+      [12, "How Qatar gets a free pass for Islamist radicalism, with Dr. Jonathan Schanzer", "Investigates Doha's dual foreign policy of hosting US military assets while funding Hamas, Muslim Brotherhood networks, and Al Jazeera propaganda.", ["Jonathan Schanzer", "Qatar", "Terror Financing", "Muslim Brotherhood"]],
+      [11, "Iran is imploding - A conversation with Dr. Sharona Mazalian Levi", "Looks past nuclear diplomacy to examine the severe economic decay, social unrest, and daily struggles of ordinary citizens inside Iran.", ["Sharona Mazalian Levi", "Iranian Society", "Iranian Regime", "Domestic Unrest"]],
+      [10, "Thirty years of traumatic peacemaking - what do Israelis really think?", "Reviews how three decades of failed land-for-peace initiatives and violent intifadas reshaped the Israeli electorate's views on territorial compromise.", ["Peace Process", "Oslo Accords", "Second Intifada", "Israeli Public Opinion"]],
+      [9, "Did Biden derail Saudi normalization?", "Analyzes Washington's diplomatic miscalculations and regional policy shifts that complicated pre-war normalization talks between Jerusalem and Riyadh.", ["Saudi Normalization", "Biden Diplomacy", "Abraham Accords", "US-Israel Relations"]],
+      [8, "Prof. Alexander Yakobson on what it means to 'decolonize Palestine'", "Historian Alexander Yakobson addresses progressive academic frameworks, dissecting whether Zionism is colonialism and defining Jewish and Palestinian peoplehood.", ["Alexander Yakobson", "Settler-Colonialism", "Decolonization", "Zionism"]],
+      [7, "Judicial Reform: Is tribalism eating Israeli democracy alive?", "Evaluates the valid critiques on both sides of Israel's judicial overhaul debate, weighing an unchecked Supreme Court against the risk of majority tyranny.", ["Judicial Reform", "Israeli Democracy", "Supreme Court", "Political Polarization"]],
+      [6, "Why won't Israel fight for the Democrats? With Rep. Ritchie Torres", "Congressman Ritchie Torres argues that abandoning bipartisan outreach to the Democratic Party is a dangerous strategic error for Israel's long-term security.", ["Ritchie Torres", "US-Israel Relations", "Democratic Party", "Bipartisanship"]],
+      [5, "When your family is taken hostage", "Examines the shattering trauma of October 7 through the lens of hostage families fighting to bring their loved ones home while piecing their lives back together.", ["Hostage Families", "October 7 Trauma", "Civil Activism", "Hostage Testimony"]],
+      [4, "Last Jew Standing: The story of Israeli Jews", "Explores how refugees from shattered European and Middle Eastern diaspora communities forged a cohesive, resilient Israeli national identity.", ["Israeli Identity", "Mizrahi Jews", "Refugee History", "Zionism"]],
+      [3, "John Spencer on why Israel hasn't yet won the war in Gaza", "Urban warfare expert John Spencer analyzes IDF tactical challenges, subterranean combat, and strategic bottlenecks in the Gaza campaign.", ["John Spencer", "Urban Warfare", "Gaza War", "Military Strategy"]],
+      [2, "The Lost History of American Jews", "Traces the distinct migration waves, institutional structures, and cultural forces that shaped American Jewry into a unique diaspora civilization.", ["American Jewry", "Diaspora History", "Jewish Migration", "Cultural Identity"], "https://www.youtube.com/watch?v=izPkLQNRZDA"],
+      [1, "The Untold Story of Herzl's Journey to Zionism", "Deconstructs myths surrounding Theodor Herzl and the Dreyfus Affair, examining the actual European political realities that forged political Zionism.", ["Theodor Herzl", "Zionism", "Dreyfus Affair", "Jewish History"], "https://www.youtube.com/watch?v=fc_nwfk0FfU"],
+      [0, "History That Matters", "Introduces the core mission of the podcast, explaining how understanding deep history and identity unlocks the complexities of modern Israel and the Middle East.", ["Podcast Introduction", "Jewish History", "Middle East History", "Identity"]]
+    ];
+
+    const STORAGE_KEY = "aha_custom_episodes_v1";
+    const RSS_URL = "https://anchor.fm/s/100cf5c64/podcast/rss";
+    let activeTag = null;
+
+    function inferMacroCategory(title, tags) {
+      const text = (title + " " + tags.join(" ")).toLowerCase();
+      if (/(iran|tehran|hormuz|khomeini|shia|hezbollah|syria|joulani|turkey|erdogan|qatar|somaliland|egypt|jordan)/.test(text)) return "Iran & Regional Axis";
+      if (/(gaza|hamas|hostage|spencer|unrwa|rafah|ceasefire|urban warfare|sinwar|disengagement|alkhatib)/.test(text)) return "Gaza & War Strategy";
+      if (/(netanyahu|election|judicial|haredi|knesset|goodman|taub|mor|koppel|sparta|draft|coalition|memorial|yom hazikaron)/.test(text)) return "Israeli Politics & Society";
+      if (/(trump|biden|america|democrat|republican|vance|mamdani|un |united nations|international law|military aid|china|torres|douthat|kristof|ezra klein)/.test(text)) return "US & Global Diplomacy";
+      if (/(antisemit|diaspora|canada|london|british|oslo|wisse|horn|van jones|black-jewish|bds|antizionis|campus|soviet|ungar-sargon|platt)/.test(text)) return "Antisemitism & Diaspora";
+      return "Jewish History & Philosophy";
+    }
+
+    function getAllEpisodes() {
+      const customRaw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      const map = new Map();
+
+      RAW_EPISODES.forEach(item => {
+        map.set(Number(item[0]), {
+          ep: Number(item[0]),
+          title: item[1],
+          summary: item[2],
+          tags: item[3] || [],
+          url: item[4] || null,
+          category: inferMacroCategory(item[1], item[3] || [])
+        });
+      });
+
+      customRaw.forEach(item => {
+        map.set(Number(item[0]), {
+          ep: Number(item[0]),
+          title: item[1],
+          summary: item[2],
+          tags: item[3] || [],
+          url: item[4] || null,
+          category: inferMacroCategory(item[1], item[3] || []),
+          isCustom: true
+        });
+      });
+
+      return Array.from(map.values());
+    }
+
+    function buildLinks(epObj) {
+      const q = encodeURIComponent(`"Ask Haviv Anything" ${epObj.ep} ${epObj.title}`);
+      const ytUrl = (epObj.url && epObj.url.includes("youtube.com")) ? epObj.url : `https://www.youtube.com/results?search_query=${q}`;
+      const primaryUrl = epObj.url || `https://www.google.com/search?q=${q}`;
+      const substackUrl = `https://www.google.com/search?q=${encodeURIComponent(`site:havivgur.substack.com "${epObj.title}"`)}`;
+      return { primaryUrl, ytUrl, substackUrl };
+    }
+
+    function formatEpisodeShareText(item) {
+      const { primaryUrl, ytUrl } = buildLinks(item);
+      const listenLink = (item.url && !item.url.includes("patreon.com")) ? primaryUrl : ytUrl;
+      return `🎙️ Ask Haviv Anything — Episode ${item.ep}: ${item.title}\n\n"${item.summary}"\n\nListen here: ${listenLink}`;
+    }
+
+    function copyEpisodeToShare(epNum) {
+      const item = getAllEpisodes().find(x => x.ep === Number(epNum));
+      if (!item) return;
+      const shareText = formatEpisodeShareText(item);
+      navigator.clipboard.writeText(shareText);
+      showToast(`Copied Ep ${item.ep} recommendation to clipboard! Ready to paste into WhatsApp, SMS, or Email.`);
+    }
+
+    function shareEpisodeWhatsApp(epNum) {
+      const item = getAllEpisodes().find(x => x.ep === Number(epNum));
+      if (!item) return;
+      const shareText = formatEpisodeShareText(item);
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
+    }
+
+    function renderTopicCloud(allEpisodes) {
+      const counts = {};
+      allEpisodes.forEach(ep => {
+        ep.tags.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+      });
+      const topTags = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 26);
+
+      const cloud = document.getElementById("topicCloud");
+      cloud.innerHTML = topTags.map(([tag, count]) => {
+        const isSelected = activeTag === tag;
+        const cls = isSelected
+          ? "bg-amber-500 text-slate-950 font-bold border-amber-400"
+          : "bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700";
+        return `<button onclick="setTagFilter('${tag.replace(/'/g, "\\'")}')" class="tag-pill px-2.5 py-1 rounded-full text-xs border ${cls}">
+          ${tag} <span class="opacity-70 ml-0.5">(${count})</span>
+        </button>`;
+      }).join("");
+
+      const indicator = document.getElementById("activeTagIndicator");
+      if (activeTag) {
+        indicator.classList.remove("hidden");
+        document.getElementById("activeTagName").textContent = activeTag;
+      } else
