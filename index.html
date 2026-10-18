@@ -17,6 +17,33 @@
       }
     }
   </script>
+  <script>
+    // ============================================================================
+    // ANALYTICS (Microsoft Clarity, project yzlvsmkthx)
+    // Dashboard: https://clarity.microsoft.com (owner login only)
+    // Owner opt-out on this browser: visit ?notrack=1   Undo: ?notrack=0
+    // Only loads on the live GitHub Pages host, so local testing is never recorded.
+    // Off-host or opted out, clarity() still queues calls in clarity.q for debugging.
+    // ============================================================================
+    (function initAnalytics() {
+      const NOTRACK_KEY = "aha_owner_notrack";
+      const params = new URLSearchParams(window.location.search);
+      try {
+        if (params.get("notrack") === "1") localStorage.setItem(NOTRACK_KEY, "1");
+        if (params.get("notrack") === "0") localStorage.removeItem(NOTRACK_KEY);
+      } catch (err) {}
+      let optedOut = false;
+      try { optedOut = localStorage.getItem(NOTRACK_KEY) === "1"; } catch (err) {}
+
+      window.clarity = window.clarity || function () { (window.clarity.q = window.clarity.q || []).push(arguments); };
+      if (optedOut || window.location.hostname !== "beezer34.github.io") return;
+
+      const t = document.createElement("script");
+      t.async = true;
+      t.src = "https://www.clarity.ms/tag/yzlvsmkthx";
+      document.head.appendChild(t);
+    })();
+  </script>
   <style>
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
@@ -57,9 +84,10 @@
 
       <div class="mt-6 pt-5 border-t border-slate-800/80 text-xs text-slate-400 flex flex-col gap-2">
         <span>Part of the community? Check the Patreon post for the 1-click unlock link or passcode.</span>
-        <a href="https://www.patreon.com/cw/AskHavivAnything" target="_blank" rel="noopener" class="mt-1 inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 transition">
+        <a href="https://www.patreon.com/cw/AskHavivAnything" target="_blank" rel="noopener" onclick="track('patreon_link_click')" class="mt-1 inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 transition">
           <span>Open Ask Haviv Anything on Patreon</span> &nearr;
         </a>
+        <span class="mt-2 text-[11px] text-slate-500">This site uses anonymous analytics (Microsoft Clarity) to see which episodes and features are most useful. Passcodes are never recorded.</span>
       </div>
     </div>
   </div>
@@ -155,6 +183,8 @@
 
     <!-- Episodes Grid -->
     <div id="episodesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+    <p class="mt-8 text-center text-[11px] text-slate-500">Community-built index, not an official Ask Haviv Anything site. Uses anonymous analytics (Microsoft Clarity) to see which episodes and features are most useful.</p>
   </main>
 
   <!-- Add / Update Episode Modal -->
@@ -241,13 +271,39 @@
       try { return localStorage.getItem(AUTH_STORAGE_KEY) === "true"; } catch (err) { return false; }
     }
 
+    // ============================================================================
+    // EVENT TRACKING HELPERS (sent to Clarity, loaded in <head>)
+    // track(): a named event, filterable in the Clarity dashboard
+    // tagSession(): a session tag; repeated values build a list (max 25)
+    // Never send passcode attempts or anything typed into the gate.
+    // ============================================================================
+    const sessionTagLists = {};
+    function track(eventName) {
+      try { window.clarity("event", eventName); } catch (err) {}
+    }
+    function tagSession(key, value, single) {
+      try {
+        if (single) { window.clarity("set", key, String(value)); return; }
+        const list = sessionTagLists[key] = sessionTagLists[key] || [];
+        const v = String(value);
+        if (!list.includes(v) && list.length < 25) list.push(v);
+        window.clarity("set", key, list.slice());
+      } catch (err) {}
+    }
+
     // Run immediately before DOM paints to prevent flash
+    let unlockedByMagicLink = false;
     (function initGateSync() {
       const params = new URLSearchParams(window.location.search);
       const magicKey = params.get("unlock");
       if (magicKey && checkPasscode(magicKey)) {
         markUnlocked();
+        unlockedByMagicLink = true;
+        track("unlock_magic_link");
+        tagSession("access", "magic_link", true);
         window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (magicKey) {
+        track("magic_link_invalid");
       }
     })();
 
@@ -255,12 +311,15 @@
       if (e && e.preventDefault) e.preventDefault();
       const inputEl = document.getElementById("gatePasscode");
       const errorEl = document.getElementById("gateError");
-      
+
       if (checkPasscode(inputEl.value)) {
         markUnlocked();
+        track("unlock_passcode");
+        tagSession("access", "passcode", true);
         document.getElementById("patreonGate").classList.add("hidden");
         clearGateError();
       } else {
+        track("wrong_passcode");
         // Red ring (not border) so it stays visible while the field has focus
         errorEl.classList.remove("hidden");
         inputEl.classList.add("ring-2", "ring-rose-500");
@@ -277,6 +336,7 @@
     }
 
     function lockSite() {
+      track("lock_clicked");
       sessionUnlocked = false;
       try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (err) {}
       document.getElementById("gatePasscode").value = "";
@@ -287,8 +347,12 @@
     window.addEventListener("DOMContentLoaded", () => {
       const gate = document.getElementById("patreonGate");
       if (isUnlocked()) {
+        // Magic link visits already set "access" above; anyone else here is a returning member
+        if (!unlockedByMagicLink) tagSession("access", "returning_unlocked", true);
         gate.classList.add("hidden");
       } else {
+        track("gate_shown_locked");
+        tagSession("access", "locked", true);
         gate.classList.remove("hidden");
       }
     });
@@ -515,6 +579,8 @@
       const item = getAllEpisodes().find(x => x.ep === Number(epNum));
       if (!item) return;
       const shareText = formatEpisodeShareText(item);
+      track("share_copy");
+      tagSession("shared_episodes", item.ep);
       navigator.clipboard.writeText(shareText);
       showToast(`Copied Ep ${item.ep} recommendation to clipboard! Ready to paste into WhatsApp, SMS, or Email.`);
     }
@@ -523,6 +589,8 @@
       const item = getAllEpisodes().find(x => x.ep === Number(epNum));
       if (!item) return;
       const shareText = formatEpisodeShareText(item);
+      track("share_whatsapp");
+      tagSession("shared_episodes", item.ep);
       window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
     }
 
@@ -556,6 +624,10 @@
     }
 
     function setTagFilter(tag) {
+      if (tag && activeTag !== tag) {
+        track("tag_filter");
+        tagSession("tags_used", tag);
+      }
       activeTag = (activeTag === tag) ? null : tag;
       render();
     }
@@ -620,7 +692,7 @@
         }[item.category] || "bg-slate-800 text-slate-300 border-slate-700";
 
         return `
-        <article class="bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex flex-col justify-between transition shadow-sm">
+        <article data-ep="${item.ep}" class="bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex flex-col justify-between transition shadow-sm">
           <div>
             <div class="flex items-center justify-between gap-2 mb-2.5">
               <div class="flex items-center gap-2">
@@ -631,7 +703,7 @@
             </div>
 
             <h2 class="text-base sm:text-lg font-bold text-white leading-snug mb-2">
-              <a href="${primaryUrl}" target="_blank" rel="noopener" class="hover:text-amber-400 transition">
+              <a href="${primaryUrl}" data-link="title" target="_blank" rel="noopener" class="hover:text-amber-400 transition">
                 ${item.title}
               </a>
             </h2>
@@ -647,13 +719,13 @@
             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
               <span class="text-slate-500">Listen / Open:</span>
               <div class="flex items-center gap-3 font-medium">
-                <a href="${ytUrl}" target="_blank" rel="noopener" class="text-rose-400 hover:text-rose-300 flex items-center gap-1">
+                <a href="${ytUrl}" data-link="youtube" target="_blank" rel="noopener" class="text-rose-400 hover:text-rose-300 flex items-center gap-1">
                   <span>YouTube</span> &nearr;
                 </a>
-                <a href="${substackUrl}" target="_blank" rel="noopener" class="text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                <a href="${substackUrl}" data-link="substack" target="_blank" rel="noopener" class="text-amber-400 hover:text-amber-300 flex items-center gap-1">
                   <span>Substack</span> &nearr;
                 </a>
-                <a href="${primaryUrl}" target="_blank" rel="noopener" class="text-slate-300 hover:text-white flex items-center gap-1">
+                <a href="${primaryUrl}" data-link="episode" target="_blank" rel="noopener" class="text-slate-300 hover:text-white flex items-center gap-1">
                   <span>Episode Link</span> &nearr;
                 </a>
               </div>
@@ -713,6 +785,7 @@
 
     // Live RSS Feed Auto-Sync
     async function syncFromRSS() {
+      track("rss_sync");
       const btn = document.getElementById("rssBtn");
       const originalHtml = btn.innerHTML;
       btn.innerHTML = `<span>Checking RSS...</span>`;
@@ -759,6 +832,7 @@
 
     // Export full archive to CSV
     function exportCSV() {
+      track("csv_export");
       const rows = [["Episode", "Title", "Category", "Summary", "Keywords", "Link"]];
       getAllEpisodes().sort((a, b) => b.ep - a.ep).forEach(ep => {
         const { primaryUrl } = buildLinks(ep);
@@ -786,6 +860,40 @@
         document.getElementById("addModal").classList.add("hidden");
         if (document.activeElement === document.getElementById("searchInput")) clearSearch();
       }
+    });
+
+    // ============================================================================
+    // INTERACTION TRACKING (listeners, so the render code stays untouched)
+    // ============================================================================
+    // Listen / open links on episode cards: event per destination plus episode list
+    document.getElementById("episodesGrid").addEventListener("click", e => {
+      const link = e.target.closest("a[data-link]");
+      if (!link) return;
+      const card = link.closest("article[data-ep]");
+      track(`listen_${link.dataset.link}`);
+      if (card) tagSession("listened_episodes", card.dataset.ep);
+    });
+
+    // Search: record the term once the visitor pauses typing for 1.5 seconds
+    let searchTrackTimer = null;
+    document.getElementById("searchInput").addEventListener("input", e => {
+      clearTimeout(searchTrackTimer);
+      const term = e.target.value.trim().toLowerCase().slice(0, 60);
+      if (term.length < 2) return;
+      searchTrackTimer = setTimeout(() => {
+        track("search");
+        tagSession("search_terms", term);
+      }, 1500);
+    });
+
+    document.getElementById("categorySelect").addEventListener("change", e => {
+      if (e.target.value === "ALL") return;
+      track("category_filter");
+      tagSession("categories_used", e.target.value);
+    });
+
+    document.getElementById("sortSelect").addEventListener("change", e => {
+      track(`sort_${e.target.value}`);
     });
 
     // Initial load
