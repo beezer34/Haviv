@@ -48,8 +48,8 @@
       </p>
 
       <form onsubmit="verifyCommunityAccess(event); return false;" class="mt-6 space-y-3">
-        <input type="password" id="gatePasscode" required placeholder="Enter Community Passcode..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-sm text-center text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
-        <p id="gateError" class="hidden text-xs text-rose-400 font-medium">Invalid passcode. Please check the Patreon community post or join below.</p>
+        <input type="password" id="gatePasscode" required oninput="clearGateError()" placeholder="Enter Community Passcode..." class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-sm text-center text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+        <p id="gateError" role="alert" class="hidden text-sm text-rose-400 font-semibold">Invalid passcode. Please check the Patreon community post or join below.</p>
         <button type="submit" class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow">
           Unlock Episode Index
         </button>
@@ -259,20 +259,28 @@
       if (checkPasscode(inputEl.value)) {
         markUnlocked();
         document.getElementById("patreonGate").classList.add("hidden");
-        errorEl.classList.add("hidden");
+        clearGateError();
       } else {
+        // Red ring (not border) so it stays visible while the field has focus
         errorEl.classList.remove("hidden");
+        inputEl.classList.add("ring-2", "ring-rose-500");
         inputEl.value = "";
         inputEl.focus();
       }
       return false;
     }
 
+    // Hide the error and red ring as soon as the visitor starts typing again
+    function clearGateError() {
+      document.getElementById("gateError").classList.add("hidden");
+      document.getElementById("gatePasscode").classList.remove("ring-2", "ring-rose-500");
+    }
+
     function lockSite() {
       sessionUnlocked = false;
       try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (err) {}
       document.getElementById("gatePasscode").value = "";
-      document.getElementById("gateError").classList.add("hidden");
+      clearGateError();
       document.getElementById("patreonGate").classList.remove("hidden");
     }
 
