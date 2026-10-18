@@ -228,12 +228,25 @@
       return input.trim().toLowerCase() === CORRECT_PASSCODE;
     }
 
+    // Storage wrappers: some in-app browsers (Patreon, Instagram) and private modes
+    // block localStorage and throw, which would otherwise kill this whole script.
+    // sessionUnlocked keeps the visitor in for this page view even if storage fails.
+    let sessionUnlocked = false;
+    function markUnlocked() {
+      sessionUnlocked = true;
+      try { localStorage.setItem(AUTH_STORAGE_KEY, "true"); } catch (err) {}
+    }
+    function isUnlocked() {
+      if (sessionUnlocked) return true;
+      try { return localStorage.getItem(AUTH_STORAGE_KEY) === "true"; } catch (err) { return false; }
+    }
+
     // Run immediately before DOM paints to prevent flash
     (function initGateSync() {
       const params = new URLSearchParams(window.location.search);
       const magicKey = params.get("unlock");
       if (magicKey && checkPasscode(magicKey)) {
-        localStorage.setItem(AUTH_STORAGE_KEY, "true");
+        markUnlocked();
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     })();
@@ -244,7 +257,7 @@
       const errorEl = document.getElementById("gateError");
       
       if (checkPasscode(inputEl.value)) {
-        localStorage.setItem(AUTH_STORAGE_KEY, "true");
+        markUnlocked();
         document.getElementById("patreonGate").classList.add("hidden");
         errorEl.classList.add("hidden");
       } else {
@@ -256,7 +269,8 @@
     }
 
     function lockSite() {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionUnlocked = false;
+      try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (err) {}
       document.getElementById("gatePasscode").value = "";
       document.getElementById("gateError").classList.add("hidden");
       document.getElementById("patreonGate").classList.remove("hidden");
@@ -264,7 +278,7 @@
 
     window.addEventListener("DOMContentLoaded", () => {
       const gate = document.getElementById("patreonGate");
-      if (localStorage.getItem(AUTH_STORAGE_KEY) === "true") {
+      if (isUnlocked()) {
         gate.classList.add("hidden");
       } else {
         gate.classList.remove("hidden");
@@ -528,4 +542,246 @@
       if (activeTag) {
         indicator.classList.remove("hidden");
         document.getElementById("activeTagName").textContent = activeTag;
-      } else
+      } else {
+        indicator.classList.add("hidden");
+      }
+    }
+
+    function setTagFilter(tag) {
+      activeTag = (activeTag === tag) ? null : tag;
+      render();
+    }
+
+    function clearSearch() {
+      document.getElementById("searchInput").value = "";
+      render();
+    }
+
+    function resetAllFilters() {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("categorySelect").value = "ALL";
+      document.getElementById("sortSelect").value = "desc";
+      activeTag = null;
+      render();
+    }
+
+    function render() {
+      const allEpisodes = getAllEpisodes();
+      renderTopicCloud(allEpisodes);
+
+      const query = document.getElementById("searchInput").value.trim().toLowerCase();
+      const clearBtn = document.getElementById("clearSearchBtn");
+      clearBtn.classList.toggle("hidden", !query);
+
+      const cat = document.getElementById("categorySelect").value;
+      const sortDir = document.getElementById("sortSelect").value;
+
+      const filtered = allEpisodes.filter(item => {
+        if (cat !== "ALL" && item.category !== cat) return false;
+        if (activeTag && !item.tags.some(t => t.toLowerCase() === activeTag.toLowerCase())) return false;
+        if (query) {
+          const hay = `${item.ep} ${item.title} ${item.summary} ${item.tags.join(" ")} ${item.category}`.toLowerCase();
+          return hay.includes(query);
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => sortDir === "desc" ? b.ep - a.ep : a.ep - b.ep);
+
+      document.getElementById("visibleCount").textContent = filtered.length;
+      document.getElementById("totalCount").textContent = allEpisodes.length;
+
+      const grid = document.getElementById("episodesGrid");
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-12 bg-slate-900/40 rounded-xl border border-slate-800">
+          <p class="text-slate-300 font-medium">No episodes match your current filter criteria.</p>
+          <button onclick="resetAllFilters()" class="mt-3 px-4 py-1.5 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">Reset Filters</button>
+        </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const { primaryUrl, ytUrl, substackUrl } = buildLinks(item);
+        const badgeColor = {
+          "Gaza & War Strategy": "bg-rose-500/10 text-rose-300 border-rose-500/30",
+          "Iran & Regional Axis": "bg-purple-500/10 text-purple-300 border-purple-500/30",
+          "Israeli Politics & Society": "bg-blue-500/10 text-blue-300 border-blue-500/30",
+          "US & Global Diplomacy": "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+          "Antisemitism & Diaspora": "bg-amber-500/10 text-amber-300 border-amber-500/30",
+          "Jewish History & Philosophy": "bg-cyan-500/10 text-cyan-300 border-cyan-500/30"
+        }[item.category] || "bg-slate-800 text-slate-300 border-slate-700";
+
+        return `
+        <article class="bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex flex-col justify-between transition shadow-sm">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold">EP ${item.ep}</span>
+                <span class="px-2.5 py-0.5 rounded border text-xs font-medium ${badgeColor}">${item.category}</span>
+                ${item.isCustom ? `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase">New</span>` : ``}
+              </div>
+            </div>
+
+            <h2 class="text-base sm:text-lg font-bold text-white leading-snug mb-2">
+              <a href="${primaryUrl}" target="_blank" rel="noopener" class="hover:text-amber-400 transition">
+                ${item.title}
+              </a>
+            </h2>
+
+            <p class="text-sm text-slate-300 leading-relaxed mb-4">${item.summary}</p>
+          </div>
+
+          <div>
+            <div class="flex flex-wrap gap-1.5 mb-3.5">
+              ${item.tags.map(t => `<button onclick="setTagFilter('${t.replace(/'/g, "\\'")}')" class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-800 text-xs transition">#${t}</button>`).join("")}
+            </div>
+
+            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <span class="text-slate-500">Listen / Open:</span>
+              <div class="flex items-center gap-3 font-medium">
+                <a href="${ytUrl}" target="_blank" rel="noopener" class="text-rose-400 hover:text-rose-300 flex items-center gap-1">
+                  <span>YouTube</span> &nearr;
+                </a>
+                <a href="${substackUrl}" target="_blank" rel="noopener" class="text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                  <span>Substack</span> &nearr;
+                </a>
+                <a href="${primaryUrl}" target="_blank" rel="noopener" class="text-slate-300 hover:text-white flex items-center gap-1">
+                  <span>Episode Link</span> &nearr;
+                </a>
+              </div>
+            </div>
+
+            <div class="mt-3 flex items-center gap-2 text-xs">
+              <button onclick="copyEpisodeToShare(${item.ep})" class="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition">Copy to Share</button>
+              <button onclick="shareEpisodeWhatsApp(${item.ep})" class="flex-1 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-medium transition">WhatsApp</button>
+            </div>
+          </div>
+        </article>`;
+      }).join("");
+    }
+
+    // Modal & Custom Episode Management
+    function toggleModal(id) {
+      document.getElementById(id).classList.toggle("hidden");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("statusToast");
+      document.getElementById("statusToastMsg").textContent = msg;
+      toast.classList.remove("hidden");
+    }
+
+    function addCustomEpisode(e) {
+      e.preventDefault();
+      const ep = Number(document.getElementById("newEpNum").value);
+      const title = document.getElementById("newEpTitle").value.trim();
+      const summary = document.getElementById("newEpSummary").value.trim();
+      const tags = document.getElementById("newEpTags").value.split(",").map(s => s.trim()).filter(Boolean);
+      const url = document.getElementById("newEpUrl").value.trim() || null;
+
+      const entry = url ? [ep, title, summary, tags, url] : [ep, title, summary, tags];
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]").filter(x => Number(x[0]) !== ep);
+      existing.push(entry);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+
+      const snippet = JSON.stringify(entry) + ",";
+      document.getElementById("snippetCode").textContent = snippet;
+      document.getElementById("snippetBox").classList.remove("hidden");
+      render();
+    }
+
+    function copySnippet() {
+      const code = document.getElementById("snippetCode").textContent;
+      navigator.clipboard.writeText(code);
+      showToast("JSON line copied to clipboard! Paste it at the top of RAW_EPISODES in index.html.");
+    }
+
+    function clearCustomStorage() {
+      localStorage.removeItem(STORAGE_KEY);
+      document.getElementById("snippetBox").classList.add("hidden");
+      render();
+      showToast("Cleared locally added episodes.");
+    }
+
+    // Live RSS Feed Auto-Sync
+    async function syncFromRSS() {
+      const btn = document.getElementById("rssBtn");
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<span>Checking RSS...</span>`;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}`);
+        const data = await res.json();
+        if (!data.items) throw new Error("Feed unavailable");
+
+        const currentMap = new Set(getAllEpisodes().map(x => x.ep));
+        const customList = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        let addedCount = 0;
+
+        data.items.forEach(item => {
+          const match = item.title.match(/^(?:Episode\s*)?(\d+)\s*[:\-–]\s*(.+)$/i);
+          if (match) {
+            const epNum = Number(match[1]);
+            const cleanTitle = match[2].trim();
+            if (!currentMap.has(epNum)) {
+              const tempDiv = document.createElement("div");
+              tempDiv.innerHTML = item.description || "";
+              const rawText = (tempDiv.textContent || "").replace(/\s+/g, " ").trim();
+              const sentences = rawText.split(/(?<=[.?!])\s+/).filter(s => !/patreon|substack|buymeacoffee|sponsor|merch/i.test(s));
+              const summary = sentences.slice(0, 2).join(" ") || "New episode synced from official RSS feed.";
+              const entry = [epNum, cleanTitle, summary, ["New Release", "RSS Sync"], item.link || null];
+              customList.push(entry);
+              currentMap.add(epNum);
+              addedCount++;
+            }
+          }
+        });
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(customList));
+        render();
+        showToast(addedCount > 0 ? `Synced ${addedCount} new episode(s) from the official RSS feed!` : `Archive is already up to date with the latest RSS feed (#153).`);
+      } catch (err) {
+        showToast("RSS auto-sync requires an active internet connection. Use '+ Add / Export Episode' to add manually.");
+      } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }
+    }
+
+    // Export full archive to CSV
+    function exportCSV() {
+      const rows = [["Episode", "Title", "Category", "Summary", "Keywords", "Link"]];
+      getAllEpisodes().sort((a, b) => b.ep - a.ep).forEach(ep => {
+        const { primaryUrl } = buildLinks(ep);
+        rows.push([
+          ep.ep,
+          `"${ep.title.replace(/"/g, '""')}"`,
+          `"${ep.category}"`,
+          `"${ep.summary.replace(/"/g, '""')}"`,
+          `"${ep.tags.join(", ")}"`,
+          `"${primaryUrl}"`
+        ]);
+      });
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", "ask_haviv_anything_index.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Keyboard shortcut: ESC clears search
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        document.getElementById("addModal").classList.add("hidden");
+        if (document.activeElement === document.getElementById("searchInput")) clearSearch();
+      }
+    });
+
+    // Initial load
+    render();
+  </script>
+</body>
+</html>
